@@ -1,0 +1,52 @@
+#!/bin/bash
+# Define usage function
+usage() {
+    echo "Usage:"
+    echo "  Dory -a <value> -b <value> -o <value> -m <value>   # Runs single function (default)"
+    echo "  Dory -i <value> -l <value> -o <value> -m <value>   # Runs group function"
+    exit 1
+}
+# Function to check and install R packages
+#check_and_install_r_packages() {
+#    packages=("ggplot2" "dplyr" "reshape2" "optparse" "future" "parallel" "furrr")  # Add your required R packages here
+#    for pkg in "${packages[@]}"; do
+#        Rscript -e "if (!requireNamespace('$pkg', quietly = TRUE)) install.packages('$pkg', repos='https://cran.rstudio.com/')"
+#    done
+#}
+
+# Run the function to ensure required packages are installed
+#check_and_install_r_packages
+
+output="."
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -a) a_value="$2"; shift 2 ;;
+        -b) b_value="$2"; shift 2 ;;
+        -i) i_value="$2"; mode="group"; shift 2 ;;  # If -i is present, switch to group mode
+        -l) l_value="$2"; mode="group"; shift 2 ;;  # If -l is present, switch to group mode
+        -o) output="$2"; shift 2 ;;
+        -m) format="$2"; shift 2 ;;
+        *) echo "Unknown parameter: $1"; usage ;;
+    esac
+done
+
+mkdir -p "$output"
+
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+# Call the appropriate R script
+if [[ -n "$a_value" && -n "$b_value" && -z "$i_value" && -z "$l_value" ]]; then
+    # Run single mode
+    Rscript "$SCRIPT_DIR/R/Dory_single.R" -a "$a_value" -b "$b_value" -o "$output" -m "$format"
+
+elif [[ -n "$i_value" && -n "$l_value" && -z "$a_value" && -z "$b_value" ]]; then
+    # Run group mode
+    Rscript "$SCRIPT_DIR/R/Dory_group.R" -i "$i_value" -l "$l_value" -o "$output" -m "$format"
+
+else
+    echo "Error: Invalid arguments. Use either:"
+    echo "  -a <state1> -b <state2>   # For comparing a single pair of states"
+    echo "  -i <file> -l <file>       # For comparing a group of states"
+    usage
+fi
