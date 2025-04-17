@@ -2,8 +2,8 @@
 # Define usage function
 usage() {
     echo "Usage:"
-    echo "  Dory -a <value> -b <value> -o <value> -m <value>   # Runs single function (default)"
-    echo "  Dory -i <value> -l <value> -o <value> -m <value>   # Runs group function"
+    echo "  Dory -m <fileformat> -a <input1> -b <input2> -o <outputPath> -c <chrnum>   # For two conditions"
+    echo "  Dory -m <fileformat> -i <inputCoordFile> -l <labelFile> -o <outputPath> -n <labelcolname> -c <chrnum>   # For more than two conditions/cell-types"
     exit 1
 }
 # Function to check and install R packages
@@ -13,6 +13,7 @@ usage() {
 #        Rscript -e "if (!requireNamespace('$pkg', quietly = TRUE)) install.packages('$pkg', repos='https://cran.rstudio.com/')"
 #    done
 #}
+
 
 # Run the function to ensure required packages are installed
 #check_and_install_r_packages
