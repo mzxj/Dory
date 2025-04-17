@@ -1,8 +1,8 @@
 read_4DNgroup <- function(coordfile, cellfile, ctcolname){
-  if(is.null(opt$coordfile)|| opt$coordfile == ""){
+  if(is.null(coordfile)|| coordfile == ""){
     stop("No coordinate file detected. Please input it with '-i inputCoordFile'.")
   }
-  if(is.null(opt$cellfile)|| opt$cellfile == ""){
+  if(is.null(cellfile)|| cellfile == ""){
     stop("No cell label file detected. Please input it with '-l labelFile'.")
   }
   # read files downloaded from 4DN datasets
@@ -63,10 +63,10 @@ read_4DNgroup <- function(coordfile, cellfile, ctcolname){
 
 
 read_csvgroup <- function(coordfile, cellfile, ctcolname){
-  if(is.null(opt$coordfile)|| opt$coordfile == ""){
+  if(is.null(coordfile)|| coordfile == ""){
     stop("No coordinate file detected. Please input it with '-i inputCoordFile'.")
   }
-  if(is.null(opt$cellfile)|| opt$cellfile == ""){
+  if(is.null(cellfile)|| cellfile == ""){
     stop("No cell label file detected. Please input it with '-l labelFile'.")
   }
   data <- read.csv(coordfile, header = TRUE)
@@ -293,10 +293,9 @@ process_EachChr <- function(chrind, allchrs, opt, outpath){
   ## step2 output: DiffScore matrix
   objsmat <- PairCellType(objs)
   objsmat <- as.data.frame(objsmat)
-  pair_celltype_p <- furrr::future_map_dfr(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat), .options = furrr::furrr_options(seed = TRUE, globals = c(PairCellTypeP, WilcoxonP, WilcoxonPMat, objsmat, objs, opt, logfile)))
+  pair_celltype_p <- furrr::future_map_dfr(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat), .options = furrr::furrr_options(seed = TRUE, globals = c("PairCellTypeP", "WilcoxonP", "WilcoxonPMat", "objsmat", objs, "opt", "logfile")))
   cat(allchrs[chrind], "complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 }
-
 
 
 
@@ -413,7 +412,7 @@ if(opt$chrnum == 'one'){
   cat("complete the step1 'Distance Calculation'. \n", file = logfile, append = TRUE)
   ## step2 output: DiffScore matrix
   objsmat <- PairCellType(objs)
-  pair_celltype_p <- furrr::future_walk(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat), .options = furrr::furrr_options(seed = TRUE, globals = c(PairCellTypeP, WilcoxonP, WilcoxonPMat, objsmat, objs, opt, logfile)))
+  pair_celltype_p <- furrr::future_walk(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat), .options = furrr::furrr_options(seed = TRUE, globals = c("PairCellTypeP", "WilcoxonP", "WilcoxonPMat", "objsmat", objs, "opt", "logfile")))
   cat("complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 
 }else if(opt$chrnum == 'more'){
@@ -421,7 +420,7 @@ if(opt$chrnum == 'one'){
   for(chrind in 1:length(chrset)){
     assign(allchrs[chrind], indataall[which(indataall$Chrom == chrset[chrind]), ] , envir = .GlobalEnv)
   }
-  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, allchrs, opt, outpath), .options = furrr::furrr_options(seed = TRUE, globals = c(process_EachChr, PairCellType, PairCellTypeP, call_region, calculate_euclidean_distance, WilcoxonP, WilcoxonPMat, objsmat, opt, allchrs, logfile, outpath)))
+  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, allchrs, opt, outpath), .options = furrr::furrr_options(seed = TRUE, globals = c("process_EachChr", "PairCellType", "PairCellTypeP", "call_region","calculate_euclidean_distance", "WilcoxonP", "WilcoxonPMat", "objsmat", "opt", "allchrs", allchrs, "logfile", "outpath")))
 
 }else{
     stop("Please indicate the chromosome number: '-c one' or '-c more' ")

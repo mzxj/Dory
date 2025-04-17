@@ -262,7 +262,8 @@ if(is.null(opt$chrnum)|| opt$chrnum == ""){
   }else if(length(chrset) > 1){
     opt$chrnum <- 'more'
   }else{
-    stop("No chromosome detected. Please check the 'Chrom' column in the coordinate file.")
+    stop("No chromosome information detected. Please verify the 'Chrom' column in the coordinate file.
+    If the input data contains only region IDs and not chromosome names, please indicate whether these regions belong to one chromosome using '-c one', or span more chromosomes by '-c more'.")
   }
 }
 
