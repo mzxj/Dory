@@ -2,21 +2,10 @@
 # Define usage function
 usage() {
     echo "Usage:"
-    echo "  Dory -m <fileformat> -a <input1> -b <input2> -o <outputPath> -c <chrnum>   # For two conditions"
-    echo "  Dory -m <fileformat> -i <inputCoordFile> -l <labelFile> -o <outputPath> -n <labelcolname> -c <chrnum>   # For more than two conditions/cell-types"
+    echo "  Dory -m <FileFormat> -a <Input1> -b <Input2> -o <OutputPath> -c <ChrNum>   # For comparing two conditions"
+    echo "  Dory -m <FileFormat> -i <InputCoordFile> -l <LabelFile> -o <OutputPath> -n <LabelColname> -c <ChrNum>   # For comparing more than two conditions"
     exit 1
 }
-# Function to check and install R packages
-#check_and_install_r_packages() {
-#    packages=("ggplot2" "dplyr" "reshape2" "optparse" "future" "parallel" "furrr")  # Add your required R packages here
-#    for pkg in "${packages[@]}"; do
-#        Rscript -e "if (!requireNamespace('$pkg', quietly = TRUE)) install.packages('$pkg', repos='https://cran.rstudio.com/')"
-#    done
-#}
-
-
-# Run the function to ensure required packages are installed
-#check_and_install_r_packages
 
 output="."
 ctcolname="Cell_Type"
@@ -49,7 +38,7 @@ elif [[ -n "$i_value" && -z "$a_value" && -z "$b_value" ]]; then
 
 else
     echo "Error: Invalid arguments. Use either:"
-    echo "  -a <state1> -b <state2>   # For comparing a single pair of states"
-    echo "  -i <file> -l <file>       # For comparing a group of states"
+    echo "  -a <state1> -b <state2>  -m <format> # For comparing two conditions"
+    echo "  -i <file> -l <file>  -m <format>     # For comparing a group of conditions"
     usage
 fi

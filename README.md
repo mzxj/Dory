@@ -27,7 +27,7 @@ Test the Dory is available globally:
 ```
 Dory -h
 ```
-You should see the help message printed in your terminal. (maybe change this part to the real output of Dory -h)
+You should see the help message printed in your terminal.
 
 
 
@@ -35,25 +35,25 @@ You should see the help message printed in your terminal. (maybe change this par
 ## Usage
 ### Compare Two Conditions, Cell Types, or Cell States
 ```
-Dory -m $fileformat -a $input1 -b $input2 -o $outputPath -c $chrnum
+Dory -m $FileFormat -a $Input1 -b $Input2 -o $OutputPath -c $ChrNum
 ```
-- `-m $fileformat`: (*Required*) Format of the input data ["4DN" or "csv"]. 
+- `-m $FileFormat`: (*Required*) Format of the input data ["4DN" or "csv"]. 
     - "4DN": If the input data is directly downloaded from the [4DN data portal](https://data.4dnucleome.org/resources/data-collections/chromatin-tracing-datasets). 
     - "csv": If the input data is standard .csv file. The 3D_coordinates.csv file requires these columns:
         - **Trace_ID**: The ID for each chromatin trace.
         - **X**, **Y**, **Z**: 3D spatial coordinates of the genomic region.
         - **Chrom**, **Chrom_Start**, **Chrom_End** or **Region_ID**: Indicate genomic location either by chromosome name, start and end coordinate, or by the genomic region ID (e.g., 1,2, ...). If "Chrom, Chrom_Start Chrom_End" columns are not provided, then the "Region_ID" column is required. 
-- `-a $input1`: (*Required*). File containing 3D coordinates of genomic regions for foreground condition. 
-- `-b $input2`: (*Required*). File containing 3D coordinates of genomic regions for background condition.
-- `-o $outputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
-- `-c $chrnum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Required if the 3D coordinate file uses "Region_ID" instead of "Chrom, Chrom_Start Chrom_End". Optional otherwise. 
+- `-a $Input1`: (*Required*). File containing 3D coordinates of genomic regions for foreground condition. 
+- `-b $Input2`: (*Required*). File containing 3D coordinates of genomic regions for background condition.
+- `-o $OutputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
+- `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Required if the 3D coordinate file uses "Region_ID" instead of "Chrom, Chrom_Start Chrom_End". Optional otherwise. 
 
 
 ### Compare Multiple Cell Types (More Than Two)
 ```
-Dory -m $fileformat -i $inputCoordFile -l $labelFile -n $labelcolname -o $outputPath -c $chrnum
+Dory -m $FileFormat -i $InputCoordFile -l $LabelFile -n $LabelColame -o $OutputPath -c $ChrNum
 ```
-- `-m $fileformat`: (*Required*) Format of the input data ["4DN" or "csv"]. 
+- `-m $FileFormat`: (*Required*) Format of the input data ["4DN" or "csv"]. 
     - "4DN": If input files are directly downloaded from the [4DN data portal](https://data.4dnucleome.org/resources/data-collections/chromatin-tracing-datasets). 
     - "csv": If the input data is standard .csv file. 
         - The 3D_coordinates.csv file requires these columns:
@@ -65,11 +65,11 @@ Dory -m $fileformat -i $inputCoordFile -l $labelFile -n $labelcolname -o $output
             - **Cell_ID**: The ID for the cell.
             - **Cell_Type**: The cell-type label or classification assigned to the corresponding cell.
 
-- `-i $inputCoordFile`: (*Required*). File containing 3D coordinates of genomic regions for all cells. 
-- `-l $labelFile`: (*Optional*) File with cell-type labels or classifications for cells. Required if cell-type labels or classifications are not included in the input 3D coordinate file. 
-- `-n $labelcolname`: (*Optional*). The column name for the cell-type label or classification. Defaults to "Cell_Type" if not specified.
-- `-o $outputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
-- `-c $chrnum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Required if using "Region_ID" instead of "Chrom, Chrom_Start Chrom_End" in the input 3D coordinate file. Optional otherwise. 
+- `-i $InputCoordFile`: (*Required*). File containing 3D coordinates of genomic regions for all cells. 
+- `-l $LabelFile`: (*Optional*) File with cell-type labels or classifications for cells. Required if cell-type labels or classifications are not included in the input 3D coordinate file. 
+- `-n $LabelColname`: (*Optional*). The column name for the cell-type label or classification. Defaults to "Cell_Type" if not specified.
+- `-o $OutputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
+- `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Required if using "Region_ID" instead of "Chrom, Chrom_Start Chrom_End" in the input 3D coordinate file. Optional otherwise. 
 
 
 ## Output
