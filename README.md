@@ -12,7 +12,7 @@ git clone https://github.com/mzxj/Dory.git && cd Dory
 ```
 chmod +x Dory
 ```
-3. Install required R packages manually, including `ggplot2`, `optparse`, `reshape2`, `dplyr`, `data.table`, `future`, `parallel`, and `furrr`. Alternatively, you can install all of them automatically using the provided script:
+3. Install required R packages manually, one by one, for the most reliable setup, including `ggplot2`, `optparse`, `reshape2`, `dplyr`, `data.table`, `future`, `parallel`, and `furrr`. Alternatively, you can install all of them automatically using the provided script:
 ```
 Rscript ./R/install_packages.R
 ```
