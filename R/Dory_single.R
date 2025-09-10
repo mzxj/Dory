@@ -15,7 +15,7 @@ read_4DNdata <- function(file){
       step <- min(step + batch_size, total_lines)
     }else{break}
   }
-  column_names <- strsplit(sub("^##", "", lines[last_hash_row]), ",")[[1]]
+  column_names <- trimws(strsplit(sub("^##", "", lines[last_hash_row]), ",")[[1]])
   column_names[1] <- sub("^columns=\\(", "", column_names[1])
   column_names[length(column_names)] <- sub("\\)$", "", column_names[length(column_names)])
   filtered_lines <- lines[(last_hash_row + 1):length(lines)]
