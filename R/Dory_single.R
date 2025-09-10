@@ -122,12 +122,12 @@ WilcoxonPMat <- function(wpboth){
   return(mat)
 } 
 
-PairCellTypeP <- function(n, opt, dismat1, dismat2, objsmat){
+PairCellTypeP <- function(n, opt, dismat1, dismat2, objsmat, chrname){
   ct <- as.matrix(objsmat[n,])
   pr_num <- dim(dismat1)[1]
   wpboth <- furrr::future_map_dfr(1:pr_num, function(k) WilcoxonP(k, dismat1, dismat2))
   wpmat <- WilcoxonPMat(wpboth)
-  write.table(wpmat, file=paste0(opt$res2path, '/DiffScoreMatrix_', ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+  write.table(wpmat, file=paste0(opt$res2path, '/DiffScoreMatrix_', chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   # plot
   colnames(wpmat) <- paste0("region", seq(1:dim(wpmat)[1]))
   rownames(wpmat) <- paste0("region", seq(1:dim(wpmat)[1]))
@@ -135,11 +135,11 @@ PairCellTypeP <- function(n, opt, dismat1, dismat2, objsmat){
   colnames(data) <- c("T1", "T2", "value")
   data$T1 <- factor(data$T1, levels=paste0("region", seq(1,dim(wpmat)[1],1)))
   data$T2 <- factor(data$T2, levels=paste0("region", seq(dim(wpmat)[1],1,-1)))
-  pdf(paste0(opt$res2path,'/DiffScoreHeatmap_', ct[1], "VS", ct[2],'.pdf'))
+  pdf(paste0(opt$res2path,'/DiffScoreHeatmap_', chrname, "_", ct[1], "VS", ct[2],'.pdf'))
   p <- ggplot(data,aes(x=T1,y=T2,fill=value))+ 
     scale_fill_gradient2(low="#d60b0e", mid="white", high="#0f70bf", midpoint = 0, na.value = "grey", limits=c(-max(abs(data$value), na.rm = TRUE), max(abs(data$value), na.rm = TRUE)))+
     geom_raster()+
-    labs(fill="DiffScore", title = paste0(ct[1], " VS ", ct[2]),
+    labs(fill="DiffScore", title = paste0(chrname,": ", ct[1], " VS ", ct[2]),
         x="Region ID", y="Region ID")+
     scale_x_discrete(breaks = paste0("region", seq(5, pr_num, by = 5)), labels=seq(5, pr_num, by=5))+
     scale_y_discrete(breaks = paste0("region", seq(5, pr_num, by = 5)), labels=seq(5, pr_num, by=5))
@@ -191,28 +191,28 @@ process_EachChr <- function(chrind,chrset, foredataall, backdataall, opt, logfil
   if(identical(foredatarg, backdatarg)){
     region_out <- foredatarg
     region_num <- dim(region_out)[1]
-    write.table(region_out, file=paste0(opt$res0path, '/RegionIn', chrind, '.tsv'), sep="\t", quote=FALSE, row.names = FALSE)
+    write.table(region_out, file=paste0(opt$res0path, '/RegionIn_', chrset[chrind], '.tsv'), sep="\t", quote=FALSE, row.names = FALSE)
   }else{
     stop("The genomic regions in these two celltypes/states/clusters are not the same")
   }
   dataplot <-data.frame(celltype = objs, tracecount = tracesallct)
-  pdf(paste0(opt$res0path,'/TraceCount', chrind, '.pdf'))
+  pdf(paste0(opt$res0path,'/TraceCount', chrset[chrind], '.pdf'))
   pct <- ggplot(dataplot, aes(x = celltype, y = tracecount)) +
     geom_bar(stat = "identity", fill = "steelblue") +
     theme_bw() +
-    labs(title = chrind, x = "", y = "Trace count") +
+    labs(title = chrset[chrind], x = "", y = "Trace count") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   print(pct)
   dev.off()
   ## step1 output: region paris' distance
   dismat1 <- calculate_euclidean_distance(foredata, region_num)
   dismat2 <- calculate_euclidean_distance(backdata, region_num) 
-  write.table(dismat1, file=paste0(opt$res1path, '/RegionPairsByTrace_', chrind, objs[1],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
-  write.table(dismat2, file=paste0(opt$res1path, '/RegionPairsByTrace_', chrind, objs[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+  write.table(dismat1, file=paste0(opt$res1path, '/RegionPairsByTrace_', chrset[chrind],'_', objs[1],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+  write.table(dismat2, file=paste0(opt$res1path, '/RegionPairsByTrace_', chrset[chrind], '_', objs[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   cat(chrset[chrind], "complete the step1 'Distance Calculation'. \n", file = logfile, append = TRUE)
   ## step2 output: DiffScore matrix
   objsmat <- matrix(c(objs[1], objs[2]), nrow=1, ncol=2)
-  pair_celltype_p <- PairCellTypeP(1, opt, dismat1, dismat2, objsmat)
+  pair_celltype_p <- PairCellTypeP(1, opt, dismat1, dismat2, objsmat, chrset[chrind])
   cat(chrset[chrind], "complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 }
 
@@ -331,7 +331,8 @@ if(opt$chrnum == 'one'){
   cat("time: ", as.numeric(Sys.time() - time), attr(Sys.time() - time, "units"), "\n", file = logfile, append = TRUE)
   ## step2 output: DiffScore matrix
   objsmat <- matrix(c(objs[1], objs[2]), nrow=1, ncol=2)
-  pair_celltype_p <- PairCellTypeP(1, opt, dismat1, dismat2,  objsmat)
+  chrname <- 'onechr'
+  pair_celltype_p <- PairCellTypeP(1, opt, dismat1, dismat2,  objsmat, chrname)
   cat("complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 }else if(opt$chrnum == 'more'){
   ### for regions spanning more chromosomes, typically across the whole genome
