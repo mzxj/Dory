@@ -2,6 +2,7 @@
 - [Installation](#Installation)
 - [Usage](#Usage)
 - [Output](#Output)
+- [Example](#Example)
 - [Contact us](#Contact-us)
 ## Installation
 1. Download Dory from GitHub and navigate into the directory:
@@ -87,6 +88,13 @@ If the traced genomic regions span multiple chromosomes, the output directory st
 - Because Dory performs intra-chromosomal analysis, the results are separated by chromosome (**Chrom**).
 - Each main output folder (S0_DataInfo, S1_Distance and S2_DiffScore) contains subdirectories named "chr_**Chrom**" (e.g., chr_chr1, chr_chr2, etc.), corresponding to each chromosome.
 - Each "chr_**Chrom**" subdirectory contains the same types of output files as described above, but limited to the genomic regions on corresponding chromosome.
+
+## Example
+Using the two datasets [4DNFIHSXQZIV.csv](https://data.4dnucleome.org/files-processed/4DNFIHSXQZIV/) and [4DNFITZBMT6Q.csv](https://data.4dnucleome.org/files-processed/4DNFITZBMT6Q/) downloaded from the 4DN data portal as an example. Both files are located in the folder [tests](https://github.com/mzxj/Dory/tree/main/tests).
+```
+Dory -m 4DN -a /path/to/4DNFIHSXQZIV.csv -b /path/to/4DNFITZBMT6Q.csv -o output/to/path 
+```
+
 
 ## Contact us
 For any questions regarding Dory, please contact Zhaoxia Ma (prm2zt@virginia.edu).
