@@ -21,7 +21,7 @@ read_4DNgroup <- function(coordfile, cellfile, ctcolname){
       step <- min(step + batch_size, total_lines)
     }else{break}
   }
-  column_names <- trimws(strsplit(sub("^##", "", lines[last_hash_row]), ",")[[1]])
+  column_names <- strsplit(sub("^##", "", lines[last_hash_row]), ",")[[1]]
   column_names[1] <- sub("^columns=\\(", "", column_names[1])
   column_names[length(column_names)] <- sub("\\)$", "", column_names[length(column_names)])
   filtered_lines <- lines[(last_hash_row + 1):length(lines)]
@@ -211,14 +211,14 @@ PairCellType <- function(objs){
   return(objsmat)
 }
 
-PairCellTypeP <- function(n, opt, objs, objsmat){
+PairCellTypeP <- function(n, opt, objs, objsmat, chrname){
   library(ggplot2)
   ct <- objsmat[n,]
   ct <- as.matrix(ct)
   pr_num <- dim(get(ct[1]))[1]
   wpboth <- furrr::future_map_dfr(1:pr_num, function(k) WilcoxonP(k, ct))
   wpmat <- WilcoxonPMat(wpboth)
-  write.table(wpmat, file=paste0(opt$res2path, '/DiffScoreMatrix_', ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+  write.table(wpmat, file=paste0(opt$res2path, '/DiffScoreMatrix_', chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   # plot
   colnames(wpmat) <- paste0("region", seq(1:dim(wpmat)[1]))
   rownames(wpmat) <- paste0("region", seq(1:dim(wpmat)[1]))
@@ -226,11 +226,11 @@ PairCellTypeP <- function(n, opt, objs, objsmat){
   colnames(data) <- c("T1", "T2", "value")
   data$T1 <- factor(data$T1, levels=paste0("region", seq(1,dim(wpmat)[1],1)))
   data$T2 <- factor(data$T2, levels=paste0("region", seq(dim(wpmat)[1],1,-1)))
-  pdf(paste0(opt$res2path,'/DiffScoreHeatmap_', ct[1], "VS", ct[2],'.pdf'))
+  pdf(paste0(opt$res2path,'/DiffScoreHeatmap_', chrname, "_", ct[1], "VS", ct[2],'.pdf'))
   p <- ggplot(data,aes(x=T1,y=T2,fill=value))+ 
     scale_fill_gradient2(low="#d60b0e", mid="white", high="#0f70bf", midpoint = 0, na.value = "grey", limits=c(-max(abs(data$value), na.rm = TRUE), max(abs(data$value), na.rm = TRUE)))+
     geom_raster()+
-    labs(fill="DiffScore", title = paste0(ct[1], " VS ", ct[2]),
+    labs(fill="DiffScore", title = paste0(chrname,": ",ct[1], " VS ", ct[2]),
         x="Region ID",y="Region ID")+
     #theme(axis.ticks = element_blank())+
     scale_x_discrete(breaks = paste0("region", seq(5, dim(wpmat)[1], by = 5)), labels=seq(5, dim(wpmat)[1], by=5))+
@@ -277,7 +277,7 @@ process_EachChr <- function(chrind, allchrs, opt, outpath){
   tracesallct <- c()
   for(i in 1:length(objs)){
     assign(objs[i],  calculate_euclidean_distance(indata[which(indata$Cell_Type == celltype[i]), ], region_num), envir = .GlobalEnv)
-    write.table(get(objs[i]), file=paste0(opt$res1path, '/RegionPairsByTrace_', objs[i],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+    write.table(get(objs[i]), file=paste0(opt$res1path, '/RegionPairsByTrace_', allchrs[chrind], '_', objs[i],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
     tracesallct <- rbind(tracesallct, length(sort(unique(indata$Trace_ID[which(indata$Cell_Type == celltype[i])]))))
   }
   dataplot <-data.frame(celltype = celltype, tracecount = tracesallct)
@@ -293,7 +293,8 @@ process_EachChr <- function(chrind, allchrs, opt, outpath){
   ## step2 output: DiffScore matrix
   objsmat <- PairCellType(objs)
   objsmat <- as.data.frame(objsmat)
-  pair_celltype_p <- furrr::future_map_dfr(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat), .options = furrr::furrr_options(seed = TRUE, globals = c("PairCellTypeP", "WilcoxonP", "WilcoxonPMat", "objsmat", objs, "opt", "logfile")))
+  chrname <- allchrs[chrind]
+  pair_celltype_p <- furrr::future_map_dfr(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat, chrname), .options = furrr::furrr_options(seed = TRUE, globals = c("PairCellTypeP", "WilcoxonP", "WilcoxonPMat", "objsmat", objs, "chrname", "opt", "logfile")))
   cat(allchrs[chrind], "complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 }
 
@@ -412,7 +413,8 @@ if(opt$chrnum == 'one'){
   cat("complete the step1 'Distance Calculation'. \n", file = logfile, append = TRUE)
   ## step2 output: DiffScore matrix
   objsmat <- PairCellType(objs)
-  pair_celltype_p <- furrr::future_walk(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat), .options = furrr::furrr_options(seed = TRUE, globals = c("PairCellTypeP", "WilcoxonP", "WilcoxonPMat", "objsmat", objs, "opt", "logfile")))
+  chrname <- chrset
+  pair_celltype_p <- furrr::future_walk(1:dim(objsmat)[1], function(n) PairCellTypeP(n, opt, objs, objsmat, chrname), .options = furrr::furrr_options(seed = TRUE, globals = c("PairCellTypeP", "WilcoxonP", "WilcoxonPMat", "objsmat", objs, "chrname", "opt", "logfile")))
   cat("complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 
 }else if(opt$chrnum == 'more'){
@@ -420,7 +422,7 @@ if(opt$chrnum == 'one'){
   for(chrind in 1:length(chrset)){
     assign(allchrs[chrind], indataall[which(indataall$Chrom == chrset[chrind]), ] , envir = .GlobalEnv)
   }
-  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, allchrs, opt, outpath), .options = furrr::furrr_options(seed = TRUE, globals = c("process_EachChr", "PairCellType", "PairCellTypeP", "call_region","calculate_euclidean_distance", "WilcoxonP", "WilcoxonPMat", "objsmat", "opt", "allchrs", allchrs, "logfile", "outpath")))
+  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, allchrs, opt, outpath), .options = furrr::furrr_options(seed = TRUE, globals = c("process_EachChr", "PairCellType", "PairCellTypeP", "call_region","calculate_euclidean_distance", "WilcoxonP", "WilcoxonPMat", "objsmat", "opt", "allchrs", allchrs,  "logfile", "outpath")))
 
 }else{
     stop("Please indicate the chromosome number: '-c one' or '-c more' ")
