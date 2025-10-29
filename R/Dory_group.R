@@ -21,7 +21,7 @@ read_4DNgroup <- function(coordfile, cellfile, ctcolname){
       step <- min(step + batch_size, total_lines)
     }else{break}
   }
-  column_names <- strsplit(sub("^##", "", lines[last_hash_row]), ",")[[1]]
+  column_names <- trimws(strsplit(sub("^##", "", lines[last_hash_row]), ",")[[1]])
   column_names[1] <- sub("^columns=\\(", "", column_names[1])
   column_names[length(column_names)] <- sub("\\)$", "", column_names[length(column_names)])
   filtered_lines <- lines[(last_hash_row + 1):length(lines)]
@@ -55,6 +55,7 @@ read_4DNgroup <- function(coordfile, cellfile, ctcolname){
     Although '-c' is optional, its default value is 'Cell_Type'. If your cells are labeled under a different column name, please provide that column name explicitly in the command line.")
   }
   colnames(cell_label) <- c("Cell_ID", "Cell_Type")
+  cell_label$Cell_Type <- gsub("/", "_", cell_label$Cell_Type)
   outcelltype <- data.frame(Cell_ID = as.numeric(cell_label$Cell_ID), Cell_Type = as.character(cell_label$Cell_Type))
   outdata_celltype <- dplyr::left_join(outdata, cell_label, by=c("Cell_ID"))
   file.remove(temp_file)
@@ -88,6 +89,7 @@ read_csvgroup <- function(coordfile, cellfile, ctcolname){
   cell_label <- read.csv(cellfile, header = TRUE)
   if (ctcolname %in% colnames(cell_label)) {
       outcelltype <- data.frame(Cell_ID = as.numeric(cell_label$Cell_ID), Cell_Type = as.character(cell_label[ctcolname]))
+      outcelltype$Cell_Type <- gsub("/", "_", outcelltype$Cell_Type)
   } else {
     stop("No cell label column found in 'cellfile'. Please specify it using '-c ColNameOfCellLabel'.
     Although '-c' is optional, its default value is 'Cell_Type'. If your cells are labeled under a different column name, please provide that column name explicitly in the command line.")
@@ -113,6 +115,7 @@ read_csvgroup_withCT <- function(coordfile, ctcolname){
   }
   if (ctcolname %in% colnames(data)) {
       outdata$Cell_Type <- as.character(data[ctcolname])
+      outdata$Cell_Type <- gsub("/", "_", outdata$Cell_Type)
   } else {
     stop("No cell label column found in the input file. If the cell label is not included in the coordinate file, please input cell label file using '-l labelFile'. 
     If the cell label is included in the coordinate file, please specify it using '-c ColNameOfCellLabel'.
@@ -218,7 +221,18 @@ PairCellTypeP <- function(n, opt, objs, objsmat, chrname){
   pr_num <- dim(get(ct[1]))[1]
   wpboth <- furrr::future_map_dfr(1:pr_num, function(k) WilcoxonP(k, ct))
   wpmat <- WilcoxonPMat(wpboth)
-  write.table(wpmat, file=paste0(opt$res2path, '/DiffScoreMatrix_', chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+  #write.table(wpmat, file=paste0(opt$res2path, '/DiffScoreMatrix_', chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
+  inds <- which(lower.tri(wpmat), arr.ind = TRUE)
+  lower_tri_df <- data.frame(regionID1 = inds[, 1], regionID2 = inds[, 2],DiffScore = wpmat[inds])
+  DiffScore <- lower_tri_df[order(lower_tri_df$DiffScore, decreasing = FALSE), ]
+  write.table(DiffScore, file=paste0(opt$res2path, '/DiffScore_',  chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = TRUE)
+  DiffScore_less <- data.frame(lower_tri_df[order(lower_tri_df$DiffScore, decreasing = FALSE), ], rank = seq(1, dim(lower_tri_df)[1], 1))
+  DiffScore_greater <- data.frame(lower_tri_df[order(lower_tri_df$DiffScore, decreasing = TRUE), ], rank = seq(1, dim(lower_tri_df)[1],  1))
+  thrd=0.05
+  DiffScore_l_thrd <- DiffScore_less[which(DiffScore_less$DiffScore < -abs(-log10(thrd))), ]
+  DiffScore_g_thrd <- DiffScore_greater[which(DiffScore_greater$DiffScore > abs(-log10(thrd))), ]
+  write.table(DiffScore_l_thrd, file=paste0(opt$res2path, '/DRP_less_',  chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+  write.table(DiffScore_g_thrd, file=paste0(opt$res2path, '/DRP_greater_',  chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
   # plot
   colnames(wpmat) <- paste0("region", seq(1:dim(wpmat)[1]))
   rownames(wpmat) <- paste0("region", seq(1:dim(wpmat)[1]))
@@ -226,6 +240,7 @@ PairCellTypeP <- function(n, opt, objs, objsmat, chrname){
   colnames(data) <- c("T1", "T2", "value")
   data$T1 <- factor(data$T1, levels=paste0("region", seq(1,dim(wpmat)[1],1)))
   data$T2 <- factor(data$T2, levels=paste0("region", seq(dim(wpmat)[1],1,-1)))
+  # pdf
   pdf(paste0(opt$res2path,'/DiffScoreHeatmap_', chrname, "_", ct[1], "VS", ct[2],'.pdf'))
   p <- ggplot(data,aes(x=T1,y=T2,fill=value))+ 
     scale_fill_gradient2(low="#d60b0e", mid="white", high="#0f70bf", midpoint = 0, na.value = "grey", limits=c(-max(abs(data$value), na.rm = TRUE), max(abs(data$value), na.rm = TRUE)))+
@@ -234,9 +249,23 @@ PairCellTypeP <- function(n, opt, objs, objsmat, chrname){
         x="Region ID",y="Region ID")+
     #theme(axis.ticks = element_blank())+
     scale_x_discrete(breaks = paste0("region", seq(5, dim(wpmat)[1], by = 5)), labels=seq(5, dim(wpmat)[1], by=5))+
-    scale_y_discrete(breaks = paste0("region", seq(5, dim(wpmat)[1], by = 5)), labels=seq(5, dim(wpmat)[1], by=5))
+    scale_y_discrete(breaks = paste0("region", seq(5, dim(wpmat)[1], by = 5)), labels=seq(5, dim(wpmat)[1], by=5))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1))
   print(p)
   dev.off()  
+  # png
+  png(paste0(opt$res2path,'/DiffScoreHeatmap_', chrname, "_", ct[1], "VS", ct[2],'.png'), width = 6, height = 5, units = "in", res=300)
+  p <- ggplot(data,aes(x=T1,y=T2,fill=value))+ 
+    scale_fill_gradient2(low="#d60b0e", mid="white", high="#0f70bf", midpoint = 0, na.value = "grey", limits=c(-max(abs(data$value), na.rm = TRUE), max(abs(data$value), na.rm = TRUE)))+
+    geom_raster()+
+    labs(fill="DiffScore", title = paste0(chrname,": ",ct[1], " VS ", ct[2]),
+        x="Region ID",y="Region ID")+
+    #theme(axis.ticks = element_blank())+
+    scale_x_discrete(breaks = paste0("region", seq(5, dim(wpmat)[1], by = 5)), labels=seq(5, dim(wpmat)[1], by=5))+
+    scale_y_discrete(breaks = paste0("region", seq(5, dim(wpmat)[1], by = 5)), labels=seq(5, dim(wpmat)[1], by=5))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1))
+  print(p)
+  dev.off() 
   cat("complete the ", n, "th pairs of cell types. \n", file = logfile, append = TRUE)
 }
 
