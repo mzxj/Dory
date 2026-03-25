@@ -62,7 +62,7 @@ call_region <- function(dataset){
 }
 
 
-calculate_euclidean_distance <- function(dataset, region_num){
+calculate_euclidean_distance <- function(dataset, region_num, normfactor){
   dataset <- dataset[which(dataset$X != 0 & dataset$Y != 0 & dataset$Z != 0), ]
   coords <- dataset
   traces <- sort(unique(coords$Trace_ID))
@@ -85,7 +85,11 @@ calculate_euclidean_distance <- function(dataset, region_num){
       i <- i+1
     }
   }
-  return(dismat)
+  #return(dismat)
+  #div <- mean(colMeans(dismat, na.rm=TRUE), na.rm=TRUE)
+  div <- normfactor
+  dataout <- dismat/div
+  return(dataout)
 }
 
 WilcoxonP <- function(k, dismat1, dismat2){
@@ -174,10 +178,10 @@ PairCellTypeP <- function(n, opt, dismat1, dismat2, objsmat, chrname){
 }
 
 
-process_EachChr <- function(chrind,chrset, foredataall, backdataall, opt, logfile, outpath, objs){
-  opt$res0path <- paste0(outpath, "/S0_DataInfo/chr_", chrset[chrind])
-  opt$res1path <- paste0(outpath, "/S1_Distance/chr_", chrset[chrind])
-  opt$res2path <- paste0(outpath, "/S2_DiffScore/chr_", chrset[chrind])
+process_EachChr <- function(chrind,chrset, foredataall, backdataall, opt, logfile, outpath, objs, NormFactorA, NormFactorB){
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo/chr_", chrset[chrind])
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance/chr_", chrset[chrind])
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore/chr_", chrset[chrind])
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
@@ -233,8 +237,8 @@ process_EachChr <- function(chrind,chrset, foredataall, backdataall, opt, logfil
   print(pct)
   dev.off()
   ## step1 output: region paris' distance
-  dismat1 <- calculate_euclidean_distance(foredata, region_num)
-  dismat2 <- calculate_euclidean_distance(backdata, region_num) 
+  dismat1 <- calculate_euclidean_distance(foredata, region_num, NormFactorA)
+  dismat2 <- calculate_euclidean_distance(backdata, region_num, NormFactorB) 
   write.table(dismat1, file=paste0(opt$res1path, '/RegionPairsByTrace_', chrset[chrind],'_', objs[1],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   write.table(dismat2, file=paste0(opt$res1path, '/RegionPairsByTrace_', chrset[chrind], '_', objs[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   cat(chrset[chrind], "complete the step1 'Distance Calculation'. \n", file = logfile, append = TRUE)
@@ -257,7 +261,9 @@ option_list <- list(
   optparse::make_option(c("-b", "--inputPath2"), type = "character", help = "Required. The background input file"),
   optparse::make_option(c("-o", "--outputPath"), type = "character", help = "Optional. Path to output directory"),
   optparse::make_option(c("-m", "--fileformat"), type = "character", help = "Required. Format of input data ['4DN'] or ['csv']"),
-  optparse::make_option(c("-c", "--chrnum"), type = "character", help = "Optional. Options: 'one' or 'more'. 'one' means all regions are located on one chromosome; 'more' means regions span multiple chromosomes, typically across the whole genome.")
+  optparse::make_option(c("-c", "--chrnum"), type = "character", help = "Optional. Options: 'one' or 'more'. 'one' means all regions are located on one chromosome; 'more' means regions span multiple chromosomes, typically across the whole genome."),
+  optparse::make_option(c("--NormFactorA"), type = "numeric", help = "Optional. The normalization factor for condition -a "),
+  optparse::make_option(c("--NormFactorB"), type = "numeric", help = "Optional. The normalization factor for condition -b ")
 
 )
 opt <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
@@ -299,21 +305,21 @@ if(is.null(opt$chrnum)|| opt$chrnum == ""){
 }
 
 if(opt$chrnum == 'one'){
-  opt$res0path <- paste0(outpath, "/S0_DataInfo/")
-  opt$res1path <- paste0(outpath, "/S1_Distance")
-  opt$res2path <- paste0(outpath, "/S2_DiffScore")
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo/")
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance")
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore")
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
     cat("Step0 directory already exists! \n", file = stdout())
   }
   if(!dir.exists(opt$res1path)){
-    dir.create(opt$res1path)
+    dir.create(opt$res1path, recursive = TRUE)
   }else{
     cat("Step1 directory already exists! \n", file = stdout())
   }
   if(!dir.exists(opt$res2path)){
-    dir.create(opt$res2path)
+    dir.create(opt$res2path, recursive = TRUE)
   }else{
     cat("Step2 directory already exists! \n", file = stdout())
   }
@@ -357,8 +363,8 @@ if(opt$chrnum == 'one'){
   print(pct)
   dev.off()
   ## step1 output: region paris' distance
-  dismat1 <- calculate_euclidean_distance(foredata, region_num)
-  dismat2 <- calculate_euclidean_distance(backdata, region_num)
+  dismat1 <- calculate_euclidean_distance(foredata, region_num, opt$NormFactorA)
+  dismat2 <- calculate_euclidean_distance(backdata, region_num, opt$NormFactorB)
   write.table(dismat1, file=paste0(opt$res1path, '/RegionPairsByTrace_', objs[1],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   write.table(dismat2, file=paste0(opt$res1path, '/RegionPairsByTrace_', objs[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
   cat("complete the step1 'Distance Calculation'. \n", file = logfile, append = TRUE)
@@ -370,7 +376,9 @@ if(opt$chrnum == 'one'){
   cat("complete the step2 'DiffScore Generation'. \n", file = logfile, append = TRUE)
 }else if(opt$chrnum == 'more'){
   ### for regions spanning more chromosomes, typically across the whole genome
-  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, chrset, foredataall, backdataall, opt, logfile, outpath, objs), .options = furrr::furrr_options(seed = TRUE))
+  NormFactorA <- opt$NormFactorA
+  NormFactorB <- opt$NormFactorB
+  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, chrset, foredataall, backdataall, opt, logfile, outpath, objs, NormFactorA, NormFactorB), .options = furrr::furrr_options(seed = TRUE))
 }else{
     stop("Please indicate the chromosome number: '-c one' or '-c more' ")
 }

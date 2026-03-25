@@ -85,7 +85,10 @@ calculate_euclidean_distance <- function(dataset, region_num){
       i <- i+1
     }
   }
-  return(dismat)
+  #return(dismat)
+  div <- mean(colMeans(dismat, na.rm=TRUE), na.rm=TRUE)
+  dataout <- dismat/div
+  return(dataout)
 }
 
 WilcoxonP <- function(k, dismat1, dismat2){
@@ -175,9 +178,9 @@ PairCellTypeP <- function(n, opt, dismat1, dismat2, objsmat, chrname){
 
 
 process_EachChr <- function(chrind,chrset, foredataall, backdataall, opt, logfile, outpath, objs){
-  opt$res0path <- paste0(outpath, "/S0_DataInfo/chr_", chrset[chrind])
-  opt$res1path <- paste0(outpath, "/S1_Distance/chr_", chrset[chrind])
-  opt$res2path <- paste0(outpath, "/S2_DiffScore/chr_", chrset[chrind])
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo/chr_", chrset[chrind])
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance/chr_", chrset[chrind])
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore/chr_", chrset[chrind])
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
@@ -299,21 +302,21 @@ if(is.null(opt$chrnum)|| opt$chrnum == ""){
 }
 
 if(opt$chrnum == 'one'){
-  opt$res0path <- paste0(outpath, "/S0_DataInfo/")
-  opt$res1path <- paste0(outpath, "/S1_Distance")
-  opt$res2path <- paste0(outpath, "/S2_DiffScore")
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo/")
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance")
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore")
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
     cat("Step0 directory already exists! \n", file = stdout())
   }
   if(!dir.exists(opt$res1path)){
-    dir.create(opt$res1path)
+    dir.create(opt$res1path, recursive = TRUE)
   }else{
     cat("Step1 directory already exists! \n", file = stdout())
   }
   if(!dir.exists(opt$res2path)){
-    dir.create(opt$res2path)
+    dir.create(opt$res2path, recursive = TRUE)
   }else{
     cat("Step2 directory already exists! \n", file = stdout())
   }

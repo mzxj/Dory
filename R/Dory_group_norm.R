@@ -160,7 +160,10 @@ calculate_euclidean_distance <- function(dataset, region_num){
       i <- i+1
     }
   }
-  return(dismat)
+  #return(dismat)
+  div <- mean(colMeans(dismat, na.rm=TRUE), na.rm=TRUE)
+  dataout <- dismat/div
+  return(dataout)
 }
 
 WilcoxonP <- function(k, ct){
@@ -273,9 +276,9 @@ PairCellTypeP <- function(n, opt, objs, objsmat, chrname){
 process_EachChr <- function(chrind, allchrs, opt, outpath){
   cat(allchrs[chrind], "time: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n", file = logfile, append = TRUE)
   library(ggplot2)
-  opt$res0path <- paste0(outpath, "/S0_DataInfo/", allchrs[chrind])
-  opt$res1path <- paste0(outpath, "/S1_Distance/", allchrs[chrind])
-  opt$res2path <- paste0(outpath, "/S2_DiffScore/", allchrs[chrind])
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo/", allchrs[chrind])
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance/", allchrs[chrind])
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore/", allchrs[chrind])
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
@@ -392,9 +395,9 @@ if(is.null(opt$chrnum)|| opt$chrnum == ""){
 
 if(opt$chrnum == 'one'){
   ### for regions in one chromosome
-  opt$res0path <- paste0(outpath, "/S0_DataInfo")
-  opt$res1path <- paste0(outpath, "/S1_Distance")
-  opt$res2path <- paste0(outpath, "/S2_DiffScore")
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo")
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance")
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore")
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{

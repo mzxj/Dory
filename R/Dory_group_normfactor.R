@@ -117,13 +117,31 @@ read_csvgroup_withCT <- function(coordfile, ctcolname){
       outdata$Cell_Type <- as.character(data[[ctcolname]])
       outdata$Cell_Type <- gsub("/", "_", outdata$Cell_Type)
   } else {
-    stop("No cell label column found in the input file. If the cell label is not included in the coordinate file, please input cell label file using '-l LabelFile'. 
+    stop("No cell label column found in the input file. If the cell label is not included in the coordinate file, please input cell label file using '-l $LabelFile'. 
     If the cell label is included in the coordinate file, please specify it using '-n $LabelColname'.
-    Although '-n' is optional, its default value is 'Cell_Type'. If your cells are labeled under a different column name, please provide that column name explicitly in the command line.")
+    Although '-c' is optional, its default value is 'Cell_Type'. If your cells are labeled under a different column name, please provide that column name explicitly in the command line.")
   }
   outdata_celltype <- outdata
   return(outdata_celltype)
 }
+
+
+read_normalization_factor <- function(normfile, ctcolname){
+  data <- read.csv(normfile, header = TRUE)
+  if (ctcolname %in% colnames(data)) {
+    outdata <- data.frame(Cell_Type = as.character(data[[ctcolname]]))
+    outdata$Cell_Type <- gsub("/", "_", outdata$Cell_Type)
+    other_col <- setdiff(colnames(data), ctcolname)
+    outdata$Norm_Factor <- as.numeric(data[[other_col]])
+  } else {
+    stop("The normalization factor NFfile should be input using '--NormFactorI NFfile.csv'. Please include two columns 'Cell_Type' and 'Norm_Factor' in the Normalization factor file. No cell label column found in the input file. If the cell label is not included in the coordinate file, please input cell label file using '-l $LabelFile'. 
+    If the cell label is included in the coordinate file, please specify it using '-n $LabelColname'.
+    Although '-n' is optional, its default value is 'Cell_Type'. If your cells are labeled under a different column name, please provide that column name explicitly in the command line.")
+  }
+  outdata_normfactor <- outdata
+  return(outdata_normfactor)
+}
+
 
 call_region <- function(dataset){
   if (!all(c("Chrom", "Chrom_Start", "Chrom_End") %in% colnames(dataset))) {
@@ -137,7 +155,7 @@ call_region <- function(dataset){
 }
 
 
-calculate_euclidean_distance <- function(dataset, region_num){
+calculate_euclidean_distance <- function(dataset, region_num, normfactor){
   dataset <- dataset[which(dataset$X != 0 & dataset$Y != 0 & dataset$Z != 0), ]
   coords <- dataset
   traces <- sort(unique(coords$Trace_ID))
@@ -160,7 +178,11 @@ calculate_euclidean_distance <- function(dataset, region_num){
       i <- i+1
     }
   }
-  return(dismat)
+  #return(dismat)
+  #div <- mean(colMeans(dismat, na.rm=TRUE), na.rm=TRUE)
+  div <- normfactor
+  dataout <- dismat/div
+  return(dataout)
 }
 
 WilcoxonP <- function(k, ct){
@@ -270,12 +292,12 @@ PairCellTypeP <- function(n, opt, objs, objsmat, chrname){
 }
 
 
-process_EachChr <- function(chrind, allchrs, opt, outpath){
+process_EachChr <- function(chrind, allchrs, opt, outpath, normfactor){
   cat(allchrs[chrind], "time: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n", file = logfile, append = TRUE)
   library(ggplot2)
-  opt$res0path <- paste0(outpath, "/S0_DataInfo/", allchrs[chrind])
-  opt$res1path <- paste0(outpath, "/S1_Distance/", allchrs[chrind])
-  opt$res2path <- paste0(outpath, "/S2_DiffScore/", allchrs[chrind])
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo/", allchrs[chrind])
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance/", allchrs[chrind])
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore/", allchrs[chrind])
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
@@ -308,7 +330,7 @@ process_EachChr <- function(chrind, allchrs, opt, outpath){
   objs <- paste0("CT_", celltype)
   tracesallct <- c()
   for(i in 1:length(objs)){
-    assign(objs[i],  calculate_euclidean_distance(indata[which(indata$Cell_Type == celltype[i]), ], region_num), envir = .GlobalEnv)
+    assign(objs[i],  calculate_euclidean_distance(indata[which(indata$Cell_Type == celltype[i]), ], region_num, normfactor$Norm_Factor[which(normfactor$Cell_Type == celltype[i])]), envir = .GlobalEnv)
     write.table(get(objs[i]), file=paste0(opt$res1path, '/RegionPairsByTrace_', allchrs[chrind], '_', objs[i],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
     tracesallct <- rbind(tracesallct, length(sort(unique(indata$Trace_ID[which(indata$Cell_Type == celltype[i])]))))
   }
@@ -350,11 +372,12 @@ options(future.globals.maxSize = 1024 * 1024 * 1024 * 3)  # 3 GB
 ### read command line 
 option_list <- list(
   optparse::make_option(c("-i", "--inputCoordFile"), type = "character", help = "Required. Input file containing region coordinates"),
-  optparse::make_option(c("-l", "--labelFile"), type = "character", help = "Optional if CoordFile include CellType/State label. Input file containing cell type or state labels for cells"),
+  optparse::make_option(c("-l", "--labelFile"), type = "character", help = "Optional if CoordFile include CellType/State label. Input .csv file containing cell type or state labels for cells. Two columns: Cell_ID & Cell_Type"),
   optparse::make_option(c("-n", "--labelcolname"), type = "character", help = "Optional. Please indicate the column name of cell-type/state label. The default is 'Cell_Type'."),
   optparse::make_option(c("-o", "--outputPath"), type = "character", help = "Optional. Path to output files"),
   optparse::make_option(c("-m", "--fileformat"), type = "character", help = "Required. Format of input data ['4DN' or 'csv']"),
-  optparse::make_option(c("-c", "--chrnum"), type = "character", help = "Optional. Options: 'one' or 'more'. 'one' means all regions are located on one chromosome; 'more' means regions span multiple chromosomes, typically across the whole genome. ")
+  optparse::make_option(c("-c", "--chrnum"), type = "character", help = "Optional. Options: 'one' or 'more'. 'one' means all regions are located on one chromosome; 'more' means regions span multiple chromosomes, typically across the whole genome. "),
+  optparse::make_option(c("--NormFactorI"), type = "character", help = "Optional. Input .csv file containing normalization factors for CellType/State. Two columns: Cell_Type & Norm_Factor")
 )
 opt <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 outpath <- opt$outputPath
@@ -376,6 +399,8 @@ if(opt$fileformat == '4DN'){
   stop("Please indicate the data format of input files: '-m 4DN' or '-m csv' ")
 }
 
+normfactor <- read_normalization_factor(opt$NormFactorI, opt$labelcolname)
+
 chrset <- unique(sort(indataall$Chrom))
 if(is.null(opt$chrnum)|| opt$chrnum == ""){
   if(length(chrset) == 1){
@@ -392,9 +417,9 @@ if(is.null(opt$chrnum)|| opt$chrnum == ""){
 
 if(opt$chrnum == 'one'){
   ### for regions in one chromosome
-  opt$res0path <- paste0(outpath, "/S0_DataInfo")
-  opt$res1path <- paste0(outpath, "/S1_Distance")
-  opt$res2path <- paste0(outpath, "/S2_DiffScore")
+  opt$res0path <- paste0(outpath, "/NML_S0_DataInfo")
+  opt$res1path <- paste0(outpath, "/NML_S1_Distance")
+  opt$res2path <- paste0(outpath, "/NML_S2_DiffScore")
   if(!dir.exists(opt$res0path)){
     dir.create(opt$res0path, recursive = TRUE)
   }else{
@@ -429,7 +454,7 @@ if(opt$chrnum == 'one'){
   objs <- paste0("CT_", celltype)
   tracesallct <- c()
   for(i in 1:length(objs)){
-    assign(objs[i],  calculate_euclidean_distance(indata[which(indata$Cell_Type == celltype[i]), ], region_num), envir = .GlobalEnv)
+    assign(objs[i],  calculate_euclidean_distance(indata[which(indata$Cell_Type == celltype[i]), ], region_num, normfactor$Norm_Factor[which(normfactor$Cell_Type == celltype[i])]), envir = .GlobalEnv)
     write.table(get(objs[i]), file=paste0(opt$res1path, '/RegionPairsByTrace_', objs[i],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = FALSE)
     tracesallct <- rbind(tracesallct, length(sort(unique(indata$Trace_ID[which(indata$Cell_Type == celltype[i])]))))
   }
@@ -460,7 +485,7 @@ if(opt$chrnum == 'one'){
   for(chrind in 1:length(chrset)){
     assign(allchrs[chrind], indataall[which(indataall$Chrom == chrset[chrind]), ] , envir = .GlobalEnv)
   }
-  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, allchrs, opt, outpath), .options = furrr::furrr_options(seed = TRUE, globals = c("process_EachChr", "PairCellType", "PairCellTypeP", "call_region","calculate_euclidean_distance", "WilcoxonP", "WilcoxonPMat", "objsmat", "opt", "allchrs", allchrs,  "logfile", "outpath")))
+  allchrsout <- furrr::future_map_dfr(1:length(chrset), function(n) process_EachChr(n, allchrs, opt, outpath, normfactor), .options = furrr::furrr_options(seed = TRUE, globals = c("process_EachChr", "PairCellType", "PairCellTypeP", "call_region","calculate_euclidean_distance", "WilcoxonP", "WilcoxonPMat", "objsmat", "opt", "allchrs", allchrs,  "normfactor", "logfile", "outpath")))
 
 }else{
     stop("Please indicate the chromosome number: '-c one' or '-c more' ")
