@@ -37,7 +37,7 @@ You should see the help message printed in your terminal.
 ## Usage
 ### Compare Two Conditions, Cell Types, or Cell States
 ```
-Dory -m $FileFormat -a $Input1 -b $Input2 -o $OutputPath -c $ChrNum
+Dory -m $FileFormat -a $Input1 -b $Input2 [-o $OutputPath] [-c $ChrNum] [--norm [--NormFactorA $x --NormFactorB $y]]
 ```
 - `-m $FileFormat`: (*Required*) Format of the input data ["4DN" or "csv"]. 
     - "4DN": If the input data is directly downloaded from the [4DN data portal](https://data.4dnucleome.org/resources/data-collections/chromatin-tracing-datasets). 
@@ -48,12 +48,13 @@ Dory -m $FileFormat -a $Input1 -b $Input2 -o $OutputPath -c $ChrNum
 - `-a $Input1`: (*Required*). File containing 3D coordinates of genomic regions for foreground condition. 
 - `-b $Input2`: (*Required*). File containing 3D coordinates of genomic regions for background condition.
 - `-o $OutputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
-- `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Required if the 3D coordinate file uses "Region_ID" instead of "Chrom, Chrom_Start Chrom_End". Optional otherwise. 
+- `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Default is "one". If only Region_ID is used, chromosome information cannot be determined; therefore, all region IDs are assumed to be on one chromosome.
+- `--norm`: (*Optional*). Apply normalization to the distance matrix. Normalization is performed only when `--norm` is specified; otherwise, no normalization is applied. By default, when `--norm` is used without --NormFactorA or --NormFactorB, the normalization factor is calculated as the mean of the mean distances from each trace across all traces. To use user-defined normalization factors, specify `--norm --NormFactorA $x --NormFactorB $y`, where `$x` and `$y` are two numeric values corresponding to the normalization factors for `-a` and `-b`, respectively.
 
 
 ### Compare Multiple Cell Types (More Than Two)
 ```
-Dory -m $FileFormat -i $InputCoordFile -l $LabelFile -n $LabelColame -o $OutputPath -c $ChrNum
+Dory -m $FileFormat -i $InputCoordFile -l $LabelFile [-n $LabelColame] [-o $OutputPath] [-c $ChrNum] [--norm [--NormFactorI $NormFactorFile]]
 ```
 - `-m $FileFormat`: (*Required*) Format of the input data ["4DN" or "csv"]. 
     - "4DN": If input files are directly downloaded from the [4DN data portal](https://data.4dnucleome.org/resources/data-collections/chromatin-tracing-datasets). 
@@ -71,7 +72,8 @@ Dory -m $FileFormat -i $InputCoordFile -l $LabelFile -n $LabelColame -o $OutputP
 - `-l $LabelFile`: (*Optional*) File with cell-type labels or classifications for cells. Required if cell-type labels or classifications are not included in the input 3D coordinate file. 
 - `-n $LabelColname`: (*Optional*). The column name for the cell-type label or classification. Defaults to "Cell_Type" if not specified.
 - `-o $OutputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
-- `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Required if using "Region_ID" instead of "Chrom, Chrom_Start Chrom_End" in the input 3D coordinate file. Optional otherwise. 
+- `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Default is "one". If only "Region_ID" is provided without "Chrom" information, all region IDs are assumed to be on one chromosome.
+- `--norm`: (*Optional*). Apply normalization to the distance matrix. Normalization is performed only when `--norm` is specified; otherwise, no normalization is applied. By default, when `--norm` is used without --NormFactorI, the normalization factor is calculated as the mean of the mean distances from each trace across all traces. To use user-defined normalization factors, specify `--norm --NormFactorI $NormFactorFile`, where `$NormFactorFile` is a `.csv` file with two columns: `"$LabelColname"` and `"Norm_factor"`. The `"$LabelColname"` column specificies the cell-type label or classification, and the `"Norm_factor"` column specifies the corresponding numeric normalization factor.
 
 
 ## Output
@@ -87,7 +89,7 @@ If the traced genomic regions are located on one chromosome, the output includes
     - DRP_greater_CT_xVSCT_y.tsv: The significantly differential (p < 0.05) region pairs with greater distance in CT_x than in CT_y. Region pairs are ranked according to their DiffScore values. 
     - DRP_less_CT_xVSCT_y.tsv: The significantly differential (p < 0.05) region pairs with less distance in CT_x than in CT_y. Region pairs are ranked according to their DiffScore values.
       
-    *Note:* These DRP lists are defined using the most relaxed significance threshold (p < 0.05). For a more stringent selection, users may choose the top-ranked region pairs from these lists based on DiffScore.
+    *Note:* 1. These DRP lists are defined using the most relaxed significance threshold (p < 0.05). For a more stringent selection, users may choose the top-ranked region pairs from these lists based on DiffScore. 2. If normalization is performed, the output will be written to the folders NML_S0_DataInfo, NML_S1_Distance, NML_S2_DiffScore.
 ### Special Case: Multiple Chromosomes
 If the traced genomic regions span multiple chromosomes, the output directory structure changes slightly:
 - Because Dory performs intra-chromosomal analysis, the results are separated by chromosome (**Chrom**).
