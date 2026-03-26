@@ -270,7 +270,7 @@ if(substr(outpath, nchar(outpath), nchar(outpath)) == "/"){
 library(ggplot2)
 logfile <- paste0("Dory_logfile_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
 
-listsdata <- data.frame(strsplit(opt$inputPath1, "[._/]"), strsplit(opt$inputPath2, "[._/]")) 
+listsdata <- data.frame(strsplit(opt$inputPath1, "[./]"), strsplit(opt$inputPath2, "[./]")) 
 objs <- as.character(t(listsdata[dim(listsdata)[1]-1,])) ## the object name is the file name without '.csv'
 
 if(opt$fileformat == '4DN'){
