@@ -50,6 +50,8 @@ Dory -m $FileFormat -a $Input1 -b $Input2 [-o $OutputPath] [-c $ChrNum] [--norm 
 - `-o $OutputPath`: (*Optional*). Output directory path. Defaults to the current directory "./" if not specified.
 - `-c $ChrNum`: (*Optional*). Number of traced chromosomes ["one" or "more"]. Default is "one". If only Region_ID is used, chromosome information cannot be determined; therefore, all region IDs are assumed to be on one chromosome.
 - `--norm`: (*Optional*). Apply normalization to the distance matrix. Normalization is performed only when `--norm` is specified; otherwise, no normalization is applied. By default, when `--norm` is used without --NormFactorA or --NormFactorB, the normalization factor is calculated as the mean of the mean distances from each trace across all traces. To use user-defined normalization factors, specify `--norm --NormFactorA $x --NormFactorB $y`, where `$x` and `$y` are two numeric values corresponding to the normalization factors for `-a` and `-b`, respectively.
+- `--nboot $bootnum`: (*Optional*). Number of resamplings for bootstrapping. Default is 1000.
+- `--CIpct $ci`: (*Optional*). Confidence interval for bootstrapping [numeric values from 0 to 1]. Default is 0.9.
 
 
 ### Compare Multiple Cell Types (More Than Two)
