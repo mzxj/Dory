@@ -15,7 +15,7 @@ nfb=""
 nboot="1000"
 CIpct="0.9"
 use_bootstrap=0
-
+seed="1"
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -44,6 +44,12 @@ while [[ $# -gt 0 ]]; do
                 CIpct="$2"; shift 2
             else
                 CIpct="0.9"; shift 1
+            fi ;;
+        --seed)
+            if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+                seed="$2"; shift 2
+            else
+                seed="1"; shift 1
             fi ;;
         -h|--help) usage ;; 
         *) echo "Unknown parameter: $1"; usage ;;
@@ -74,7 +80,7 @@ if [[ -n "$a_value" && -n "$b_value" && -z "$i_value" && -z "$l_value" ]]; then
             exit 1
         else
             Rscript "$SCRIPT_DIR/R/Dory_Bootstrap.R" \
-                -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" --nboot "$nboot" --CIpct "$CIpct"
+                -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" --nboot "$nboot" --CIpct "$CIpct" --seed "$seed"
         fi
 
     else
@@ -86,7 +92,7 @@ if [[ -n "$a_value" && -n "$b_value" && -z "$i_value" && -z "$l_value" ]]; then
         elif [[  "$norm" -eq 1  && -z "$nfa" && -z "$nfb" ]]; then
             Rscript "$SCRIPT_DIR/R/Dory_single_norm.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
         else 
-            Rscript "$SCRIPT_DIR/R/Dory_Bootstrap.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
+            Rscript "$SCRIPT_DIR/R/Dory_single.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
         fi 
     fi
     
