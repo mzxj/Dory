@@ -410,7 +410,7 @@ BootstrapCI <- function(n, opt, objs, logfile, bt_outpath, outpath, chrname){
   if(!dir.exists(bootpath)){
     dir.create(bootpath, recursive = TRUE)
   }else{
-    cat("Step4 directory already exists! \n", file = stdout())
+    cat("Step3 directory already exists! \n", file = stdout())
   }
   outrgci <- rgci[order(as.numeric(rgci$regionID2), as.numeric(rgci$regionID1), decreasing = FALSE), ]
   write.table(outrgci, file=paste0(bootpath, '/DiffScore', ci_level,'CI_', chrname, "_", ct[1], "VS", ct[2],'.tsv'), sep="\t", quote=FALSE, row.names = FALSE, col.names = TRUE)
@@ -436,8 +436,9 @@ option_list <- list(
   optparse::make_option(c("-o", "--outputPath"), type = "character", help = "Optional. Path to output directory"),
   optparse::make_option(c("-m", "--fileformat"), type = "character", help = "Required. Format of input data ['4DN'] or ['csv']"),
   optparse::make_option(c("-c", "--chrnum"), type = "character", help = "Optional. Options: 'one' or 'more'. 'one' means all regions are located on one chromosome; 'more' means regions span multiple chromosomes, typically across the whole genome."),
-  optparse::make_option(c("--nboot"), type = "numeric", help = "Optional. Resampling times for bootstrapping"),
-  optparse::make_option(c("--CIpct"), type = "numeric", help = "Optional. Resampling times for bootstrapping")
+  optparse::make_option(c("--nboot"), type = "numeric", help = "Optional. Resampling times for bootstrapping. Default is 1000"),
+  optparse::make_option(c("--CIpct"), type = "numeric", help = "Optional. Confidence interval for bootstrapping [numeric number from 0 to 1]. Default of 0.9"),
+  optparse::make_option(c("--seed"), type = "numeric", help = "Optional. Seed for bootstrapping. Default is 1")
  
 )
 opt <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
@@ -464,23 +465,6 @@ if(opt$fileformat == '4DN'){
 }
 
 
-
-############# Step4 Bootstrapping 
-set.seed(123)
-fore_prep <- prep_trace_bootstrap(foredataall, "Trace_ID")
-back_prep <- prep_trace_bootstrap(backdataall, "Trace_ID")
-
-bt_outpath <- file.path(outpath, "BootDiffScore")
-if(!dir.exists(bt_outpath)){
-  dir.create(bt_outpath, recursive = TRUE)
-}else{
-  cat("BootDiffScore directory already exists! \n", file = stdout())
-}
-for (b in seq_len(as.numeric(opt$nboot))) {
-  fore_bt <- bootstrap_from_prep(fore_prep)
-  back_bt <- bootstrap_from_prep(back_prep)
-  Run_Dory_Once(bboot = b, foredataall = fore_bt, backdataall = back_bt, opt = opt, bt_outpath = bt_outpath, objs = objs, logfile = logfile,inner_parallel = TRUE)
-}
 
 
 chrset <- unique(sort(c(foredataall$Chrom, backdataall$Chrom)))
@@ -576,6 +560,23 @@ if(opt$chrnum == 'one'){
 }
 
 
+############# Step3 Bootstrapping 
+set.seed(as.numeric(opt$seed))
+fore_prep <- prep_trace_bootstrap(foredataall, "Trace_ID")
+back_prep <- prep_trace_bootstrap(backdataall, "Trace_ID")
+
+bt_outpath <- file.path(outpath, "BootDiffScore")
+if(!dir.exists(bt_outpath)){
+  dir.create(bt_outpath, recursive = TRUE)
+}else{
+  cat("BootDiffScore directory already exists! \n", file = stdout())
+}
+for (b in seq_len(as.numeric(opt$nboot))) {
+  fore_bt <- bootstrap_from_prep(fore_prep)
+  back_bt <- bootstrap_from_prep(back_prep)
+  Run_Dory_Once(bboot = b, foredataall = fore_bt, backdataall = back_bt, opt = opt, bt_outpath = bt_outpath, objs = objs, logfile = logfile,inner_parallel = TRUE)
+}
+
 #### bootstrap confidence interval
 if(opt$chrnum == 'one'){
   chrname <- 'onechr'
@@ -593,7 +594,6 @@ if(opt$chrnum == 'one'){
 unlink(bt_outpath, recursive = TRUE, force = TRUE)
 
 cat("time: ", as.numeric(Sys.time() - time), attr(Sys.time() - time, "units"), "\n", file = logfile, append = TRUE)
-
 
 
 
