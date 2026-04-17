@@ -12,6 +12,10 @@ ctcolname="Cell_Type"
 norm=0
 nfa=""
 nfb=""
+nboot="1000"
+CIpct="0.9"
+use_bootstrap=0
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -27,6 +31,20 @@ while [[ $# -gt 0 ]]; do
         --NormFactorA) nfa="$2"; shift 2 ;;
         --NormFactorB) nfb="$2"; shift 2 ;;
         --NormFactorI) nfi="$2"; shift 2 ;;
+        --nboot) 
+            use_bootstrap=1
+            if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+                nboot="$2"; shift 2
+            else
+                nboot="1000"; shift 1
+            fi ;;
+        --CIpct) 
+            use_bootstrap=1
+            if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+                CIpct="$2"; shift 2
+            else
+                CIpct="0.9"; shift 1
+            fi ;;
         -h|--help) usage ;; 
         *) echo "Unknown parameter: $1"; usage ;;
     esac
@@ -42,17 +60,35 @@ if [[ -n "$a_value" && -n "$b_value" && -z "$i_value" && -z "$l_value" ]]; then
     if [[ -n "$nfa" && -z "$nfb" ]] || [[ -z "$nfa" && -n "$nfb" ]]; then
         echo "Error: --NormFactorA and --NormFactorB must be provided together." >&2
         exit 1
+    fi
 
-    elif [[ "$norm" -eq 0  && -n "$nfa" && -n "$nfb" ]]; then
-        echo "Warning: --norm is required together with --NormFactorA and --NormFactorB. Providing only --NormFactorA and --NormFactorB is not sufficient, so basic mode will be run without normalization."
-        Rscript "$SCRIPT_DIR/R/Dory_single.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
-    elif [[ "$norm" -eq 1 && -n "$nfa" && -n "$nfb" ]]; then    
-        Rscript "$SCRIPT_DIR/R/Dory_single_normfactor.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" --NormFactorA "$nfa" --NormFactorB "$nfb"
-    elif [[  "$norm" -eq 1  && -z "$nfa" && -z "$nfb" ]]; then
-        Rscript "$SCRIPT_DIR/R/Dory_single_norm.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
-    else 
-        Rscript "$SCRIPT_DIR/R/Dory_single.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
-    fi 
+    if [[ "$use_bootstrap" -eq 1 ]]; then
+        if [[ "$norm" -eq 0 && -n "$nfa" && -n "$nfb" ]]; then
+            echo "Error: bootstrap + normalization mode is not implemented yet in this wrapper." >&2
+            exit 1
+        elif [[ "$norm" -eq 1 && -n "$nfa" && -n "$nfb" ]]; then
+            echo "Error: bootstrap + explicit normalization factors is not implemented yet in this wrapper." >&2
+            exit 1
+        elif [[ "$norm" -eq 1 && -z "$nfa" && -z "$nfb" ]]; then
+            echo "Error: bootstrap + normalization mode is not implemented yet in this wrapper." >&2
+            exit 1
+        else
+            Rscript "$SCRIPT_DIR/R/Dory_Bootstrap.R" \
+                -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" --nboot "$nboot" --CIpct "$CIpct"
+        fi
+
+    else
+        if [[ "$norm" -eq 0  && -n "$nfa" && -n "$nfb" ]]; then
+            echo "Warning: --norm is required together with --NormFactorA and --NormFactorB. Providing only --NormFactorA and --NormFactorB is not sufficient, so basic mode will be run without normalization."
+            Rscript "$SCRIPT_DIR/R/Dory_single.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
+        elif [[ "$norm" -eq 1 && -n "$nfa" && -n "$nfb" ]]; then    
+            Rscript "$SCRIPT_DIR/R/Dory_single_normfactor.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" --NormFactorA "$nfa" --NormFactorB "$nfb"
+        elif [[  "$norm" -eq 1  && -z "$nfa" && -z "$nfb" ]]; then
+            Rscript "$SCRIPT_DIR/R/Dory_single_norm.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
+        else 
+            Rscript "$SCRIPT_DIR/R/Dory_Bootstrap.R" -a "$a_value" -b "$b_value" -o "$output" -m "$file_format" -c "$chr_format" 
+        fi 
+    fi
     
 elif [[ -n "$i_value" && -z "$a_value" && -z "$b_value" ]]; then
     # Run group mode 
